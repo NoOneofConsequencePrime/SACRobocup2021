@@ -6,8 +6,8 @@ typedef double db;
 
 // Components
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
-Adafruit_DCMotor *LB = AFMS.getMotor(1);
-Adafruit_DCMotor *RB = AFMS.getMotor(2);
+Adafruit_DCMotor *RB = AFMS.getMotor(1);
+Adafruit_DCMotor *LB = AFMS.getMotor(2);
 Adafruit_DCMotor *RF = AFMS.getMotor(3);
 Adafruit_DCMotor *LF = AFMS.getMotor(4);
 
@@ -28,7 +28,7 @@ void setup() {
 }
 
 void moveForward(db inpDist, db inpSpd) {
-  int spd = round(inpSpd);
+  int spd = round(inpSpd*255);
   LF -> setSpeed(spd);
   LB -> setSpeed(spd);
   RF -> setSpeed(spd);
@@ -79,9 +79,17 @@ void turn(db inpRot, db inpSpd) {
 
 void loop() {
   Serial.println("running");
-  moveForward(10, 150);
-  moveForward(-10, 200);
-  turn(90, 250);
-  turn(-90, 100);
-  delay(1000);
+//  moveForward(10, 150);
+//  moveForward(-10, 200);
+//  turn(90, 250);
+//  turn(-90, 100);
+  LF -> setSpeed(255);
+  LB -> setSpeed(255);
+  RF -> setSpeed(255);
+  RB -> setSpeed(255);
+  LF -> run(FORWARD);
+  LB -> run(FORWARD);
+  RF -> run(FORWARD);
+  RB -> run(FORWARD);
+//  delay(1000);
 }
