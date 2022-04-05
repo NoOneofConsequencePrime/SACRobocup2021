@@ -33,6 +33,7 @@ void moveForward(db inpDist, db inpSpd) {
   LB -> setSpeed(spd);
   RF -> setSpeed(spd);
   RB -> setSpeed(spd);
+  
   if (inpDist > 0) {
     LF -> run(FORWARD);
     LB -> run(FORWARD);
@@ -44,20 +45,21 @@ void moveForward(db inpDist, db inpSpd) {
     RF -> run(BACKWARD);
     RB -> run(BACKWARD);
   }
-  
   delay(1000);
+  
   LF -> run(RELEASE);
   LB -> run(RELEASE);
   RF -> run(RELEASE);
   RB -> run(RELEASE);
 }
 
-void turn(db inpRot, db inpSpd) {
-  int spd = round(inpSpd);
+void moveTurn(db inpRot, db inpSpd) {
+  int spd = round(inpSpd*255);
   LF -> setSpeed(spd);
   LB -> setSpeed(spd);
   RF -> setSpeed(spd);
   RB -> setSpeed(spd);
+  
   if (inpRot > 0) {
     LF -> run(FORWARD);
     LB -> run(FORWARD);
@@ -77,19 +79,24 @@ void turn(db inpRot, db inpSpd) {
   RB -> run(RELEASE);
 }
 
+void stopMotor() {
+  LF -> setSpeed(0);
+  LB -> setSpeed(0);
+  RF -> setSpeed(0);
+  RB -> setSpeed(0);
+  LF -> run(RELEASE);
+  LB -> run(RELEASE);
+  RF -> run(RELEASE);
+  RB -> run(RELEASE);
+}
+
 void loop() {
   Serial.println("running");
-//  moveForward(10, 150);
-//  moveForward(-10, 200);
-//  turn(90, 250);
-//  turn(-90, 100);
-  LF -> setSpeed(255);
-  LB -> setSpeed(255);
-  RF -> setSpeed(255);
-  RB -> setSpeed(255);
-  LF -> run(FORWARD);
-  LB -> run(FORWARD);
-  RF -> run(FORWARD);
-  RB -> run(FORWARD);
-//  delay(1000);
+  
+  moveForward(1, 0.5);
+  moveForward(-1, 0.5);
+  moveTurn(-1, 0.5);
+  moveTurn(1, 0.5);
+  stopMotor();
+  delay(1000);
 }
