@@ -4,7 +4,6 @@
 #define S3 7
 #define sensorOut 8
 
-
 void setup() {
   // put your setup code here, to run once:
   pinMode(S0, OUTPUT);
@@ -20,6 +19,15 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  // red number check
+  digitalWrite(S2, LOW);
+  digitalWrite(S3, LOW);
+  redcount = pulseIn(sensorOut, LOW);
+  digitalWrite(S2, HIGH);
+  digitalWrite(S3, HIGH);
+  greencount = pulseIn(sensorOut, LOW);
+  digitalWrite(S2, LOW);  
+  digitalWrite(S3, HIGH);
+  bluecount = pulseIn(sensorOut, LOW);
 
 }
