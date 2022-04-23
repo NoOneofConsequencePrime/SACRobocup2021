@@ -4,13 +4,11 @@
 #define S3 7
 #define sensorOut 8
 
-bool black_tile = false;
-bool checkpoint = true;
-
 void setup() {
   Serial.begin(115200);      // Serial monitor
   Serial2.begin(115200);     // baud rate set at 115200, the rest of the parameters are default, USE PINS 16, 17 NOT 18, 19
   pinMode(13, OUTPUT);
+
   pinMode(S0, OUTPUT);
   pinMode(S1, OUTPUT);
   pinMode(S2, OUTPUT);
@@ -34,7 +32,7 @@ void Dispense(int value, int receiving) {
     delay(1000);
   }
   
-  //writing done so camera knows to start detecting again
+  //telling camera so it knows to start detecting again
   Serial2.write(value);
   digitalWrite(13, HIGH);
   delay(500);
@@ -42,6 +40,12 @@ void Dispense(int value, int receiving) {
 }
 
 void check_colour() {
+  int val;
+  val=analogRead(0);   //connect grayscale sensor to Analog 0
+  Serial.print("Color: ");
+  Serial.println(val);//print the value to serial
+  delay(100);
+
   digitalWrite(S2, LOW);
   digitalWrite(S3, LOW);
   int redcount = pulseIn(sensorOut, LOW);
@@ -51,27 +55,21 @@ void check_colour() {
   digitalWrite(S2, LOW);  
   digitalWrite(S3, HIGH);
   int bluecount = pulseIn(sensorOut, LOW);
-  
-  if (redcount > 75 && greencount > 75 && bluecount > 75) {
-    Serial.println("Black");
-    black_tile = true;
-    checkpoint = false;
-  }
-  else if (redcount < 30 && greencount < 30 && bluecount < 30) {
-    Serial.println("White");
-    black_tile = false;
-    checkpoint = false;
-  }
-  else if (redcount > 35 && redcount < 50 && greencount > 35 && greencount < 50 && bluecount > 35 && bluecount < 50) {
-    Serial.println("Silver");
-    black_tile = false;
-    checkpoint = true;
-  }
+}
 
+void temp() {
+  int value = analogRead(1);
+  int volts = (value/1024)*5;
+  int temp = volts*100;
+
+  Serial.print("Temperature: ");
+  Serial.println(temp);
+  delay(100);
 }
 
 void loop() {
   check_colour();
+  temp();
   if (Serial2.available()) {
     int data_rcvd = Serial2.read();
     Serial.print("Received: ");
