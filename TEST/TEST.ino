@@ -17,7 +17,7 @@ const double gyroOffset = -0.0160901;
 const int dofCnts = 6;
 
 // Datas
-double gx, gy, gz;
+double gx, gy, gz;// x and z
 VL53L0X_RangingMeasurementData_t measure;
 unsigned long curTime;
 int dt;
@@ -34,25 +34,25 @@ void setup() {
 //  accelgyro.initialize();
 
   while (!Serial) {delay(1);}
-//  if (!mpu.begin()) {
-//    Serial.println("Failed to find MPU6050 chip");
-//    while (1) {
-//      delay(10);
-//    }
-//  }
-//  Serial.println("MPU6050 Found!");
-  if (!lox.begin()) {
-    Serial.println("Failed to boot VL53L0X");
-    while(1) {delay(10);}
+  if (!mpu.begin()) {
+    Serial.println("Failed to find MPU6050 chip");
+    while (1) {
+      delay(10);
+    }
   }
-  Serial.println("VL53L0X Found!"); 
+  Serial.println("MPU6050 Found!");
+//  if (!lox.begin()) {
+//    Serial.println("Failed to boot VL53L0X");
+//    while(1) {delay(10);}
+//  }
+//  Serial.println("VL53L0X Found!"); 
 
-//  // set accelerometer range to +-8G
-//  mpu.setAccelerometerRange(MPU6050_RANGE_2_G);
-//  // set gyro range to +- 500 deg/s
-//  mpu.setGyroRange(MPU6050_RANGE_250_DEG);
-//  // set filter bandwidth to 21 Hz
-//  mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
+  // set accelerometer range to +-8G
+  mpu.setAccelerometerRange(MPU6050_RANGE_2_G);
+  // set gyro range to +- 500 deg/s
+  mpu.setGyroRange(MPU6050_RANGE_250_DEG);
+  // set filter bandwidth to 21 Hz
+  mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
 
   Serial.println("---Startup Complete---");
 }
@@ -69,30 +69,28 @@ double perInstConv(double num) {
 void getData() {
   /* Get new sensor events with the readings */
 
-//  // mpu6050 (gyro)
-//  sensors_event_t a, g, temp;
-//  mpu.getEvent(&a, &g, &temp);
-//  gz -= perInstConv(g.gyro.z)*180.0/M_PI;
+  // mpu6050 (gyro)
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp);
+  gz -= perInstConv(g.gyro.z)*180.0/M_PI;
 
   // vl53l0x (DoF distance laser)
-  int arr[dofCnts];
-  for (int i = 0; i < dofCnts; i++) {
-    lox.rangingTest(&measure, false);
-    if (measure.RangeStatus != 4) arr[i] = measure.RangeMilliMeter;
-    else i--;
-  }
-  sortArray(arr, dofCnts);
-  dt = (arr[dofCnts/2-1]+arr[dofCnts/2]+1)/2;
-  Serial.println(dt);
+//  int arr[dofCnts];
+//  for (int i = 0; i < dofCnts; i++) {
+//    lox.rangingTest(&measure, false);
+//    if (measure.RangeStatus != 4) arr[i] = measure.RangeMilliMeter;
+//    else i--;
+//  }
+//  sortArray(arr, dofCnts);
+//  dt = (arr[dofCnts/2-1]+arr[dofCnts/2]+1)/2;
+//  Serial.println(dt);
 }
-
-int cnt = 0;
 
 void loop() {
   // Update
   getData();
   
-//  Serial.println(gz, 4);
+  Serial.println(gz, 4);
   
 //  motor -> run(FORWARD);
 //  Serial.println("running");

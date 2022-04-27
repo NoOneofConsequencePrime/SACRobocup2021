@@ -94,9 +94,9 @@ void loop() {
   Serial.println("running");
   
   moveForward(1, 0.5);
-  moveForward(-1, 0.5);
-  moveTurn(-1, 0.5);
-  moveTurn(1, 0.5);
-  stopMotor();
-  delay(1000);
+//  moveForward(-1, 0.5);
+//  moveTurn(-1, 0.5);
+//  moveTurn(1, 0.5);
+//  stopMotor();
+//  delay(1000);
 }

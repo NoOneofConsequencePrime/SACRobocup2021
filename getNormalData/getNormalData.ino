@@ -30,14 +30,9 @@ void setup() {
   Serial.println("---Startup Complete---");
 }
 
-int cnt = 0;
-
 void loop() {
   // Update
-//  getData();
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
   Serial.println(g.gyro.z, 8);
-  cnt++;
-  if (cnt >= 50000) exit(0);
 }
