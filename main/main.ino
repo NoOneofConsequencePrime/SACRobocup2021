@@ -24,15 +24,17 @@ typedef long long ll;
  */
 
 // Settings
-const db gyroOffset = -0.0164267;
+const db gyroOffset = -0.0167299;
 const int dofCnts = 3;
 const int maxSpd = 255;
 const int wasteDelay = 3;
+const int moveWait = 300;
 
 // Data
 db gx, gy, gz;// x and z
 unsigned long curTime;
 int dF, dL, dR;
+int wallDist;
 
 // Hardware components
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
@@ -60,16 +62,34 @@ void setup() {
   pinMode(SHT_LOXR, OUTPUT);
   
   setID();
+  setupData();
+  delay(100);
   
   Serial.println("---Startup Complete---");
 }
 
 void loop() {
+  getDataDoF();
+  if (dL > wallDist+200) {
+    turn(-90, 0.5);
+    moveForward(300, 0.5);
+  } else if (dF > wallDist+200) {
+    moveForward(300, 0.5);
+  } else if (dR > wallDist+200) {
+    turn(90, 0.5);
+    moveForward(300, 0.5);
+  } else {
+    turn(180, 0.5);
+  }
+
+//  moveForward(200, 0.5);
+//  delay(200000);
+  
 //  getData();
 //  debug();
 //  turn(90, 0.5);
-  moveForward(100, 0.5);
-  delay(10000);
+//  moveForward(100, 0.5);
+//  delay(100000);
 }
 
 void setID() {
@@ -160,7 +180,8 @@ void moveForward(db inpDist, db inpSpd) {
   LB -> setSpeed(spd);
   RF -> setSpeed(spd);
   RB -> setSpeed(spd);
-  
+
+  int distReduc = spd*spd/130;
   if (inpDist > 0) {
     LF -> run(FORWARD);
     LB -> run(FORWARD);
@@ -168,12 +189,9 @@ void moveForward(db inpDist, db inpSpd) {
     RB -> run(FORWARD);
     getDataDoF();
     db curDF = dF;
-    while (curDF-inpDist < dF) {
+    while (curDF-inpDist+distReduc < dF) {
       getDataDoF();
       delay(wasteDelay);
-      Serial.println("dF :"+String(dF));
-      Serial.println("curDF: "+String(curDF));
-      Serial.println();
     }
   } else if (inpDist < 0) {
     LF -> run(BACKWARD);
@@ -182,7 +200,7 @@ void moveForward(db inpDist, db inpSpd) {
     RB -> run(BACKWARD);
     getDataDoF();
     db curDF = dF;
-    while (curDF-inpDist > dF) {
+    while (curDF-inpDist+distReduc > dF) {
       getDataDoF();
       delay(wasteDelay);
     }
@@ -192,6 +210,8 @@ void moveForward(db inpDist, db inpSpd) {
   LB -> run(RELEASE);
   RF -> run(RELEASE);
   RB -> run(RELEASE);
+
+  delay(moveWait);
 }
 
 void turn(db inpRot, db inpSpd) {
@@ -201,6 +221,7 @@ void turn(db inpRot, db inpSpd) {
   RF -> setSpeed(spd);
   RB -> setSpeed(spd);
 
+  int turnReduc = spd*spd/8100;
   if (inpRot > 0) {// right (cw)
     LF -> run(FORWARD);
     LB -> run(FORWARD);
@@ -208,7 +229,7 @@ void turn(db inpRot, db inpSpd) {
     RB -> run(BACKWARD);
     getDataMPU();
     db curGZ = gz;
-    while (curGZ+inpRot > gz) {
+    while (curGZ+inpRot-turnReduc > gz) {
       getDataMPU();
       delay(wasteDelay);
     }
@@ -219,7 +240,7 @@ void turn(db inpRot, db inpSpd) {
     RB -> run(FORWARD);
     getDataMPU();
     db curGZ = gz;
-    while (curGZ+inpRot < gz) {
+    while (curGZ+inpRot-turnReduc < gz) {
       getDataMPU();
       delay(wasteDelay);
     }
@@ -229,6 +250,16 @@ void turn(db inpRot, db inpSpd) {
   LB -> run(RELEASE);
   RF -> run(RELEASE);
   RB -> run(RELEASE);
+
+  delay(moveWait);
+}
+
+void setupData() {
+  // inp
+  getDataDoF();
+
+  // setting
+  wallDist = min(dF, min(dL, dR));
 }
 
 void debug() {
