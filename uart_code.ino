@@ -58,10 +58,16 @@ void check_colour() {
 }
 
 void temp() {
-  int value = analogRead(1);
-  int volts = (value/1024)*5;
-  int temp = volts*100;
+  int value=0;            //initializing variables
+  float volts=0.0;      
+  float temp=0.0;      
+  int LM35 = A1; 
 
+
+  value=analogRead(LM35);          //read from A0
+  volts=(value/1024.0)*5.0;      //conversion to volts
+  temp= volts*100.0;             //conversion to temp Celsius
+  
   Serial.print("Temperature: ");
   Serial.println(temp);
   delay(100);
