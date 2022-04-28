@@ -24,11 +24,13 @@ typedef long long ll;
  */
 
 // Settings
-const db gyroOffset = -0.0167299;
+//const db gyroOffset = -0.0183495;
+const db gyroOffset = -0.1;
 const int dofCnts = 3;
 const int maxSpd = 255;
 const int wasteDelay = 3;
-const int moveWait = 300;
+const int moveWait = 500;
+const int blockDelay = 1400, rightDegDelay;
 
 // Data
 db gx, gy, gz;// x and z
@@ -54,9 +56,11 @@ VL53L0X_RangingMeasurementData_t measureR;
 
 void setup() {
   Serial.begin(115200);
+  Serial2.begin(115200);
   Serial.println("Initializing...");
   while (!Serial) {delay(1);}
   
+  pinMode(13, OUTPUT);
   pinMode(SHT_LOXF, OUTPUT);
   pinMode(SHT_LOXL, OUTPUT);
   pinMode(SHT_LOXR, OUTPUT);
@@ -68,21 +72,52 @@ void setup() {
   Serial.println("---Startup Complete---");
 }
 
-void loop() {
-  getDataDoF();
-  if (dL > wallDist+200) {
-    turn(-90, 0.5);
-    moveForward(300, 0.5);
-  } else if (dF > wallDist+200) {
-    moveForward(300, 0.5);
-  } else if (dR > wallDist+200) {
-    turn(90, 0.5);
-    moveForward(300, 0.5);
-  } else {
-    turn(180, 0.5);
+void dispense(int value, int receiving) {
+  //do the dispensing and then move away, after write Done back to camera
+  if (receiving == 0) {
+    delay(1000);
   }
+  else if (receiving == 1) {
+    delay(1000);
+  }
+  else if (receiving == 2) {
+    delay(1000);
+  }
+  
+  //telling camera so it knows to start detecting again
+  Serial2.write(value);
+  digitalWrite(13, HIGH);
+  delay(500);
+  digitalWrite(13, LOW);  
+}
 
-//  moveForward(200, 0.5);
+void loop() {
+  if (Serial2.available()) {
+    int data_rcvd = Serial2.read();
+    Serial.print("Received: ");
+    Serial.println(data_rcvd);
+    if (data_rcvd == 48) dispense(2, 0);
+    if (data_rcvd == 49) dispense(2, 1);
+    if (data_rcvd == 50) dispense(2, 2);
+  } else {
+//    Serial.println("Unavailable");
+  }
+//  moveForward(150, 1);
+//  delay(3000);
+//  getDataDoF();
+//  if (dL > wallDist+200) {
+//    turn(-90, 0.5);
+//    moveForward(300, 0.5);
+//  } else if (dF > wallDist+200) {
+//    moveForward(300, 0.5);
+//  } else if (dR > wallDist+200) {
+//    turn(90, 0.5);
+//    moveForward(300, 0.5);
+//  } else {
+//    turn(180, 0.5);
+//  }
+
+//  moveForward(300, 0.5);
 //  delay(200000);
   
 //  getData();
@@ -181,29 +216,31 @@ void moveForward(db inpDist, db inpSpd) {
   RF -> setSpeed(spd);
   RB -> setSpeed(spd);
 
-  int distReduc = spd*spd/130;
+  int distReduc = spd*spd/110;
   if (inpDist > 0) {
     LF -> run(FORWARD);
     LB -> run(FORWARD);
     RF -> run(FORWARD);
     RB -> run(FORWARD);
-    getDataDoF();
-    db curDF = dF;
-    while (curDF-inpDist+distReduc < dF) {
-      getDataDoF();
-      delay(wasteDelay);
-    }
+    delay(blockDelay*inpDist/300);
+//    getDataDoF();
+//    db curDF = dF;
+//    while (curDF-inpDist+distReduc < dF) {
+//      getDataDoF();
+//      delay(wasteDelay);
+//    }
   } else if (inpDist < 0) {
     LF -> run(BACKWARD);
     LB -> run(BACKWARD);
     RF -> run(BACKWARD);
     RB -> run(BACKWARD);
-    getDataDoF();
-    db curDF = dF;
-    while (curDF-inpDist+distReduc > dF) {
-      getDataDoF();
-      delay(wasteDelay);
-    }
+    delay(blockDelay*(-inpDist)/300);
+//    getDataDoF();
+//    db curDF = dF;
+//    while (curDF-inpDist+distReduc > dF) {
+//      getDataDoF();
+//      delay(wasteDelay);
+//    }
   }
 
   LF -> run(RELEASE);
