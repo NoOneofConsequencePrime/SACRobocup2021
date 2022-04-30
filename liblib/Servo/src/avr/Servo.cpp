@@ -202,8 +202,7 @@ static void finISR(timer16_Sequence_t timer)
     timerDetach(TIMER3OUTCOMPAREA_INT);
   }
 #else
-  //For arduino - in future: call here to a currently undefined function to reset the timer
-  (void) timer;  // squash "unused parameter 'timer' [-Wunused-parameter]" warning
+    //For arduino - in future: call here to a currently undefined function to reset the timer
 #endif
 }
 
