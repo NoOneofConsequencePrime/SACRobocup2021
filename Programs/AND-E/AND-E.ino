@@ -17,10 +17,9 @@ typedef long long ll;
 #define LOXF_ADDRESS 0x30
 #define LOXL_ADDRESS 0x31
 #define LOXR_ADDRESS 0x32
-#define SHT_LOXF 6
-#define SHT_LOXL 5
-#define SHT_LOXR 7
-#define DEBUG_PIN 43
+#define SHT_LOXL 6
+#define SHT_LOXF 5
+#define SHT_LOXR 4
 
 // Settings
 const int maxSpd = 255;
@@ -40,11 +39,11 @@ Adafruit_DCMotor *LB = AFMS.getMotor(3);
 Adafruit_DCMotor *RF = AFMS.getMotor(1);
 Adafruit_DCMotor *LF = AFMS.getMotor(2);
 
-Adafruit_VL53L0X loxF = Adafruit_VL53L0X();
 Adafruit_VL53L0X loxL = Adafruit_VL53L0X();
+Adafruit_VL53L0X loxF = Adafruit_VL53L0X();
 Adafruit_VL53L0X loxR = Adafruit_VL53L0X();
-VL53L0X_RangingMeasurementData_t measureF;
 VL53L0X_RangingMeasurementData_t measureL;
+VL53L0X_RangingMeasurementData_t measureF;
 VL53L0X_RangingMeasurementData_t measureR;
 
 MPU6050 mpu6050(Wire);
@@ -58,39 +57,36 @@ void setID() {
   RF -> setSpeed(0); RF -> run(RELEASE);
   RB -> setSpeed(0); RB -> run(RELEASE);
 
-//  // DoF: all reset
-//  digitalWrite(SHT_LOXF, LOW);    
-//  digitalWrite(SHT_LOXL, LOW);
-//  digitalWrite(SHT_LOXR, LOW);
-//  delay(10);
-//
-//  // DoF: procedural activation
-//  digitalWrite(SHT_LOXF, HIGH);
-//  delay(10);
-//  if(!loxF.begin(LOXF_ADDRESS)) {
-//    Serial.println(F("Failed to boot front VL53L0X"));
-//  }
-//  delay(10);
-//  
-//  digitalWrite(SHT_LOXL, HIGH);
-//  delay(10);
-//  if(!loxL.begin(LOXL_ADDRESS)) {
-//    Serial.println(F("Failed to boot left VL53L0X"));
-//  }
-//  delay(10);
-//
-//  digitalWrite(SHT_LOXR, HIGH);
-//  delay(10);
-//  if(!loxR.begin(LOXR_ADDRESS)) {
-//    Serial.println(F("Failed to boot right VL53L0X"));
-//  }
-//  delay(10);
+  // DoF: all reset
+  digitalWrite(SHT_LOXF, LOW);    
+  digitalWrite(SHT_LOXL, LOW);
+  digitalWrite(SHT_LOXR, LOW);
+  delay(10);
+
+  // DoF: procedural activation
+  digitalWrite(SHT_LOXF, HIGH);
+  delay(10);
+  if(!loxF.begin(LOXF_ADDRESS)) {
+    Serial.println(F("Failed to boot front VL53L0X"));
+  }
+  delay(10);
+  
+  digitalWrite(SHT_LOXL, HIGH);
+  delay(10);
+  if(!loxL.begin(LOXL_ADDRESS)) {
+    Serial.println(F("Failed to boot left VL53L0X"));
+  }
+  delay(10);
+
+  digitalWrite(SHT_LOXR, HIGH);
+  delay(10);
+  if(!loxR.begin(LOXR_ADDRESS)) {
+    Serial.println(F("Failed to boot right VL53L0X"));
+  }
+  delay(10);
 
   // LCD
   lcd.begin(16, 2);
-  
-  // System
-  pinMode(DEBUG_PIN, OUTPUT);
 }
 
 void getDataMPU() {
@@ -132,9 +128,7 @@ void setup() {
 
   Serial.println("---Startup Complete---");
   lcd.print("---Complete---");
-  digitalWrite(DEBUG_PIN, HIGH);
   delay(200);
-  digitalWrite(DEBUG_PIN, LOW);
   lcd.clear();
 }
 
@@ -156,9 +150,9 @@ void turn(db inpRot, db inpSpd, db errorM, int fixCnt) {
     RF -> run(BACKWARD);
     RB -> run(BACKWARD);
     while (gz-curZ < inpRot) {
-      lcd.clear(); lcd.setCursor(0, 1);
-      lcd.println(String(gz-curZ)+"; "+String(inpRot));
-      lcd.print(gz);
+//      lcd.clear(); lcd.setCursor(0, 1);
+//      lcd.println(String(gz-curZ)+"; "+String(inpRot));
+//      lcd.print(gz);
       getDataMPU();
     }
   } else if (inpRot < 0) {
@@ -167,9 +161,9 @@ void turn(db inpRot, db inpSpd, db errorM, int fixCnt) {
     RF -> run(FORWARD);
     RB -> run(FORWARD);
     while (gz-curZ > inpRot) {
-      lcd.clear(); lcd.setCursor(0, 1);
-      lcd.println(String(gz-curZ)+"; "+String(inpRot));
-      lcd.print(gz);
+//      lcd.clear(); lcd.setCursor(0, 1);
+//      lcd.println(String(gz-curZ)+"; "+String(inpRot));
+//      lcd.print(gz);
       getDataMPU();
     }
   }
@@ -183,21 +177,65 @@ void turn(db inpRot, db inpSpd, db errorM, int fixCnt) {
   if (fixCnt == 0) delay(moveWait);
 }
 
+void moveForward(int inpDist, db inpSpd, int errorM, int fixCnt) {
+  if (abs(inpDist) < errorM || inpSpd < 0.3) return;
+//  if (fixCnt >= 2) return;
+
+  getDataDoF('F');
+  int curDF = dF;
+  int spd = round(inpSpd*maxSpd);
+  LF -> setSpeed(spd);
+  LB -> setSpeed(spd);
+  RF -> setSpeed(spd);
+  RB -> setSpeed(spd);
+
+  if (inpDist > 0) {
+    LF -> run(FORWARD);
+    LB -> run(FORWARD);
+    RF -> run(FORWARD);
+    RB -> run(FORWARD);
+    while (curDF-dF < inpDist) {
+      getDataDoF('F');
+    }
+  } else if (inpDist < 0) {
+    LF -> run(BACKWARD);
+    LB -> run(BACKWARD);
+    RF -> run(BACKWARD);
+    RB -> run(BACKWARD);
+    while (curDF-dF > inpDist) {
+      getDataDoF('F');
+    }
+  }
+
+  moveForward(-(curDF-inpDist-dF), inpSpd*P_coeff, errorM, fixCnt+1);
+  LF -> setSpeed(0);
+  LB -> setSpeed(0);
+  RF -> setSpeed(0);
+  RB -> setSpeed(0);
+  if (fixCnt == 0) delay(moveWait);
+}
+
 void debug() {
   getDataMPU();
-//  Serial.println("dF: "+String(dF));
-//  Serial.println("dL: "+String(dL));
-//  Serial.println("dR: "+String(dR));
-  Serial.println(gz, 4);
-  Serial.println("\n");
-  lcd.clear();
-  lcd.setCursor(0, 1);
-  lcd.print(gz);
+  getDataDoF('A');
+  Serial.println("dL: "+String(dL));
+  Serial.println("dF: "+String(dF));
+  Serial.println("dR: "+String(dR));
+//  Serial.println(gz, 4);
+//  Serial.println("\n");
+//  lcd.clear();
+//  lcd.setCursor(0, 1);
+//  lcd.print(gz);
+  Serial.println();
 }
 
 void loop() {
+  moveForward(200, 0.6, 8, 0);
+  delay(99999);
+  
 //  debug();
 //  turn((random(5)-2)*90, 1, 0.1, 0);
-  turn(360, 1, 0.1, 0);
-  turn(-360, 1, 0.1, 0);
+
+//  turn(360, 1, 0.1, 0);
+//  turn(-360, 1, 0.1, 0);
 }

@@ -17,9 +17,9 @@ typedef long long ll;
 #define LOXF_ADDRESS 0x30
 #define LOXL_ADDRESS 0x31
 #define LOXR_ADDRESS 0x32
-#define SHT_LOXF 6
-#define SHT_LOXL 5
-#define SHT_LOXR 7
+#define SHT_LOXL 6
+#define SHT_LOXF 5
+#define SHT_LOXR 4
 
 // Settings
 const int maxSpd = 255;
@@ -44,11 +44,11 @@ VL53L0X_RangingMeasurementData_t measureL;
 VL53L0X_RangingMeasurementData_t measureR;
 
 MPU6050 mpu6050(Wire);
-LiquidCrystal lcd(7, 8, 12, 11, 10, 9);
+//LiquidCrystal lcd(7, 8, 12, 11, 10, 9);
 
 void setID() {
-  // LCD
-  lcd.begin(16, 2);
+//  // LCD
+//  lcd.begin(16, 2);
   
   // AFMS: shield & motors
   AFMS.begin();
@@ -57,35 +57,35 @@ void setID() {
   RF -> setSpeed(0); RF -> run(RELEASE);
   RB -> setSpeed(0); RB -> run(RELEASE);
 
-//  // DoF: all reset
-//  digitalWrite(SHT_LOXF, LOW);    
-//  digitalWrite(SHT_LOXL, LOW);
-//  digitalWrite(SHT_LOXR, LOW);
-//  delay(10);
-//
-//  // DoF: procedural activation
-//  digitalWrite(SHT_LOXF, HIGH);
-//  delay(10);
-//  if(!loxF.begin(LOXF_ADDRESS)) {
-//    Serial.println(F("Failed to boot front VL53L0X"));
-//  }
-//  delay(10);
-//  
-//  digitalWrite(SHT_LOXL, HIGH);
-//  delay(10);
-//  if(!loxL.begin(LOXL_ADDRESS)) {
-//    Serial.println(F("Failed to boot left VL53L0X"));
-//  }
-//  delay(10);
-//
-//  digitalWrite(SHT_LOXR, HIGH);
-//  delay(10);
-//  if(!loxR.begin(LOXR_ADDRESS)) {
-//    Serial.println(F("Failed to boot right VL53L0X"));
-//  }
-//  delay(10);
+  // DoF: all reset
+  digitalWrite(SHT_LOXF, LOW);    
+  digitalWrite(SHT_LOXL, LOW);
+  digitalWrite(SHT_LOXR, LOW);
+  delay(10);
 
-  lcd.print("Complete");
+  // DoF: procedural activation
+  digitalWrite(SHT_LOXF, HIGH);
+  delay(10);
+  if(!loxF.begin(LOXF_ADDRESS)) {
+    Serial.println(F("Failed to boot front VL53L0X"));
+  }
+  delay(10);
+  
+  digitalWrite(SHT_LOXL, HIGH);
+  delay(10);
+  if(!loxL.begin(LOXL_ADDRESS)) {
+    Serial.println(F("Failed to boot left VL53L0X"));
+  }
+  delay(10);
+
+  digitalWrite(SHT_LOXR, HIGH);
+  delay(10);
+  if(!loxR.begin(LOXR_ADDRESS)) {
+    Serial.println(F("Failed to boot right VL53L0X"));
+  }
+  delay(10);
+
+//  lcd.print("Complete");
 }
 
 void getDataMPU() {
@@ -138,9 +138,15 @@ void setup() {
 }
 
 void loop() {
-  lcd.clear();
-  lcd.setCursor(0, 1);
-  lcd.print(millis()/1000);
+  getDataDoF('A');
+  Serial.println(dL);
+  Serial.println(dF);
+  Serial.println(dR);
+  Serial.println();
+  
+//  lcd.clear();
+//  lcd.setCursor(0, 1);
+//  lcd.print(millis()/1000);
   
 //  getDataMPU();
 //  debug();
