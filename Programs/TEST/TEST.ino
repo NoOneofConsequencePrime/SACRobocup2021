@@ -7,11 +7,11 @@ typedef long long ll;
 #include "Adafruit_Sensor.h"
 #include "Adafruit_VL53L0X.h"
 #include "I2Cdev.h"
-#include "Wire.h"
 #include "Adafruit_MotorShield.h"
 #include "utility/Adafruit_PWMServoDriver.h"
 #include "ArduinoSort.h"
 #include "MPU6050_tockn.h"
+#include "LiquidCrystal.h"
 
 // DoF pins
 #define LOXF_ADDRESS 0x30
@@ -31,10 +31,10 @@ int dF, dL, dR;
 
 // Hardware
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
-Adafruit_DCMotor *RB = AFMS.getMotor(1);
-Adafruit_DCMotor *LB = AFMS.getMotor(2);
-Adafruit_DCMotor *RF = AFMS.getMotor(3);
-Adafruit_DCMotor *LF = AFMS.getMotor(4);
+Adafruit_DCMotor *RB = AFMS.getMotor(4);
+Adafruit_DCMotor *LB = AFMS.getMotor(3);
+Adafruit_DCMotor *RF = AFMS.getMotor(1);
+Adafruit_DCMotor *LF = AFMS.getMotor(2);
 
 Adafruit_VL53L0X loxF = Adafruit_VL53L0X();
 Adafruit_VL53L0X loxL = Adafruit_VL53L0X();
@@ -44,8 +44,12 @@ VL53L0X_RangingMeasurementData_t measureL;
 VL53L0X_RangingMeasurementData_t measureR;
 
 MPU6050 mpu6050(Wire);
+LiquidCrystal lcd(7, 8, 12, 11, 10, 9);
 
 void setID() {
+  // LCD
+  lcd.begin(16, 2);
+  
   // AFMS: shield & motors
   AFMS.begin();
   LF -> setSpeed(0); LF -> run(RELEASE);
@@ -53,33 +57,35 @@ void setID() {
   RF -> setSpeed(0); RF -> run(RELEASE);
   RB -> setSpeed(0); RB -> run(RELEASE);
 
-  // DoF: all reset
-  digitalWrite(SHT_LOXF, LOW);    
-  digitalWrite(SHT_LOXL, LOW);
-  digitalWrite(SHT_LOXR, LOW);
-  delay(10);
+//  // DoF: all reset
+//  digitalWrite(SHT_LOXF, LOW);    
+//  digitalWrite(SHT_LOXL, LOW);
+//  digitalWrite(SHT_LOXR, LOW);
+//  delay(10);
+//
+//  // DoF: procedural activation
+//  digitalWrite(SHT_LOXF, HIGH);
+//  delay(10);
+//  if(!loxF.begin(LOXF_ADDRESS)) {
+//    Serial.println(F("Failed to boot front VL53L0X"));
+//  }
+//  delay(10);
+//  
+//  digitalWrite(SHT_LOXL, HIGH);
+//  delay(10);
+//  if(!loxL.begin(LOXL_ADDRESS)) {
+//    Serial.println(F("Failed to boot left VL53L0X"));
+//  }
+//  delay(10);
+//
+//  digitalWrite(SHT_LOXR, HIGH);
+//  delay(10);
+//  if(!loxR.begin(LOXR_ADDRESS)) {
+//    Serial.println(F("Failed to boot right VL53L0X"));
+//  }
+//  delay(10);
 
-  // DoF: procedural activation
-  digitalWrite(SHT_LOXF, HIGH);
-  delay(10);
-  if(!loxF.begin(LOXF_ADDRESS)) {
-    Serial.println(F("Failed to boot front VL53L0X"));
-  }
-  delay(10);
-  
-  digitalWrite(SHT_LOXL, HIGH);
-  delay(10);
-  if(!loxL.begin(LOXL_ADDRESS)) {
-    Serial.println(F("Failed to boot left VL53L0X"));
-  }
-  delay(10);
-
-  digitalWrite(SHT_LOXR, HIGH);
-  delay(10);
-  if(!loxR.begin(LOXR_ADDRESS)) {
-    Serial.println(F("Failed to boot right VL53L0X"));
-  }
-  delay(10);
+  lcd.print("Complete");
 }
 
 void getDataMPU() {
@@ -107,10 +113,10 @@ void getDataDoF(char c) {// F, A
 }
 
 void debug() {
-  Serial.println("dF: "+String(dF));
-  Serial.println("dL: "+String(dL));
-  Serial.println("dR: "+String(dR));
-  Serial.println(z, 4);
+//  Serial.println("dF: "+String(dF));
+//  Serial.println("dL: "+String(dL));
+//  Serial.println("dR: "+String(dR));
+  Serial.println(gz, 4);
   Serial.println("\n");
 }
 
@@ -132,5 +138,19 @@ void setup() {
 }
 
 void loop() {
+  lcd.clear();
+  lcd.setCursor(0, 1);
+  lcd.print(millis()/1000);
   
+//  getDataMPU();
+//  debug();
+  
+//  LF -> setSpeed(200);
+//  LB -> setSpeed(200);
+//  RF -> setSpeed(200);
+//  RB -> setSpeed(200);
+//  LF -> run(FORWARD);
+//  LB -> run(FORWARD);
+//  RF -> run(BACKWARD);
+//  RB -> run(BACKWARD);
 }
