@@ -25,7 +25,9 @@ typedef long long ll;
 const int maxSpd = 255;
 const int wasteDelay = 5;
 const int moveWait = 300;
-const int wallSafeDist = 80;
+const int moveDist = 280;
+const db turnDist = 89;
+const int wallDist = 45;
 const db P_coeff = 0.8;
 
 // Data
@@ -178,7 +180,7 @@ void turn(db inpRot, db inpSpd, db errorM, int fixCnt) {
 }
 
 void moveForward(int inpDist, db inpSpd, int errorM, int fixCnt) {
-  if (abs(inpDist) < errorM || inpSpd < 0.3) return;
+  if (abs(inpDist) < errorM || inpSpd < 0.3 || dF < wallDist) return;
 //  if (fixCnt >= 2) return;
 
   getDataDoF('F');
@@ -196,6 +198,15 @@ void moveForward(int inpDist, db inpSpd, int errorM, int fixCnt) {
     RB -> run(FORWARD);
     while (curDF-dF < inpDist) {
       getDataDoF('F');
+      if (dF < wallDist) {
+        LF -> setSpeed(0);
+        LB -> setSpeed(0);
+        RF -> setSpeed(0);
+        RB -> setSpeed(0);
+        if (fixCnt == 0) delay(moveWait);
+        
+        return;
+      }
     }
   } else if (inpDist < 0) {
     LF -> run(BACKWARD);
@@ -230,12 +241,23 @@ void debug() {
 }
 
 void loop() {
-  moveForward(200, 0.6, 8, 0);
-  delay(99999);
+  getDataDoF('A');
+  if (dL > 200) {
+    turn(-turnDist, 1, 0.1, 0);
+  } else if (dF > 200) {
+  } else if (dR > 200) {
+    turn(turnDist, 1, 0.1, 0);
+  } else {
+    turn(2*turnDist, 1, 0.1, 0);
+  }
+  moveForward(moveDist, 0.7, 8, 0);
   
-//  debug();
-//  turn((random(5)-2)*90, 1, 0.1, 0);
-
-//  turn(360, 1, 0.1, 0);
-//  turn(-360, 1, 0.1, 0);
+//  moveForward(200, 0.6, 8, 0);
+//  delay(99999);
+//  
+////  debug();
+////  turn((random(5)-2)*90, 1, 0.1, 0);
+//
+////  turn(360, 1, 0.1, 0);
+////  turn(-360, 1, 0.1, 0);
 }
