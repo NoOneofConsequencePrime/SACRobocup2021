@@ -34,10 +34,11 @@ typedef long long ll;
 // Settings
 const int maxSpd = 255;
 const int wasteDelay = 5;
-const int moveWait = 300;
-const int moveDist = 270;
-const db turnDist = 88;
-const int wallDist = 45;// mm
+const int moveWait = 250;
+const int moveDist = 275;
+const db turnDist = 90;
+const int wallDist = 80;// mm
+const int wallDetect = 120;// mm
 const db P_coeff = 0.6;
 const int blackTile = 300, silverTile = 150;
 const int ltr_H = 0, ltr_S = 4, ltr_U = 2, ltr_W = 1, ltr_Y = 6, ltr_G = 5, ltr_R = 3;
@@ -284,40 +285,39 @@ void moveForward(int inpDist, db inpSpd, int errorM, int fixCnt) {
 
 void debug() {
 //  getDataMPU();
-//  getDataDoF('A');
-  getDataCamera();
+  getDataDoF('F');
+//  getDataCamera();
 //  Serial.println("dL: "+String(dL));
-//  Serial.println("dF: "+String(dF));
+  Serial.println("dF: "+String(dF));
 //  Serial.println("dR: "+String(dR));
 //  Serial.println(gz, 4);
-//  Serial.println("\n");
 
 //  Serial.println(String(p0l)+"; "+String(p1l)+"; "+String(p2l));
 //  Serial.println(String(p0r)+"; "+String(p1r)+"; "+String(p2r));
 //  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(String(camL)+"; "+String(camR));
+//  lcd.setCursor(0, 0);
+//  lcd.print(String(camL)+"; "+String(camR));
 //  lcd.setCursor(0, 1);
 //  lcd.print(camR);
 //  Serial.println();
 }
 
 void loop() {
-//  getDataDoF('A');
 //  moveForward(moveDist, 0.7, 8, 0);
 //  moveForward(moveDist, 0.7, 8, 0);
 //  delay(99999);
   
-//  if (dL > 200) {
-//    turn(-turnDist, 1, 0.1, 0);
-//  } else if (dF > 200) {
-//  } else if (dR > 200) {
-//    turn(turnDist, 1, 0.1, 0);
-//  } else {
-//    turn(2*turnDist, 1, 0.1, 0);
-//  }
-//  moveForward(moveDist, 0.7, 8, 0);
+  getDataDoF('A');
+  if (dL > wallDetect) {
+    turn(-turnDist, 1, 0.1, 0);
+  } else if (dF > wallDetect) {
+  } else if (dR > wallDetect) {
+    turn(turnDist, 1, 0.1, 0);
+  } else {
+    turn(2*turnDist, 1, 0.1, 0);
+  }
+  moveForward(moveDist, 0.7, 8, 0);
   
-  debug();
+//  debug();c
 //  turn((random(5)-2)*90, 1, 0.1, 0);
 }
