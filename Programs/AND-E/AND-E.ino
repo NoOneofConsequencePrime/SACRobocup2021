@@ -13,14 +13,23 @@ typedef long long ll;
 #include "MPU6050_tockn.h"
 #include "LiquidCrystal.h"
 
-// DoF pins
+// DoF Pins
 #define LOXF_ADDRESS 0x30
 #define LOXL_ADDRESS 0x31
 #define LOXR_ADDRESS 0x32
 #define SHT_LOXL 6
 #define SHT_LOXF 5
 #define SHT_LOXR 4
+
 #define GRAYSCALE_PIN 8
+
+// Camera Pins
+#define P0L 29
+#define P1L 30
+#define P2L 31
+#define P0R 23
+#define P1R 24
+#define P2R 25
 
 // Settings
 const int maxSpd = 255;
@@ -31,11 +40,13 @@ const db turnDist = 88;
 const int wallDist = 45;// mm
 const db P_coeff = 0.6;
 const int blackTile = 300, silverTile = 150;
+const int ltr_H = 0, ltr_S = 4, ltr_U = 2, ltr_W = 1, ltr_Y = 6, ltr_G = 5, ltr_R = 3;
 
 // Data
 db gz;
 int dF, dL, dR;
 int gsVal;
+char camL, camR;
 
 // Hardware
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
@@ -122,6 +133,27 @@ void getDataAmbient() {
   gsVal = analogRead(GRAYSCALE_PIN);
 }
 
+void getDataCamera() {
+  int pL = (digitalRead(P0L)<<2)|(digitalRead(P1L)<<1)|digitalRead(P2L);
+  int pR = (digitalRead(P0R)<<2)|(digitalRead(P1R)<<1)|digitalRead(P2R);
+  if (pR == ltr_H) camR = 'H';
+  else if (pR == ltr_S) camR = 'S';
+  else if (pR == ltr_U) camR = 'U';
+  else if (pR == ltr_W) camR = 'W';
+  else if (pR == ltr_Y) camR = 'Y';
+  else if (pR == ltr_G) camR = 'G';
+  else if (pR == ltr_R) camR = 'R';
+  else camR = 'N';
+  if (pL == ltr_H) camL = 'H';
+  else if (pL == ltr_S) camL = 'S';
+  else if (pL == ltr_U) camL = 'U';
+  else if (pL == ltr_W) camL = 'W';
+  else if (pL == ltr_Y) camL = 'Y';
+  else if (pL == ltr_G) camL = 'G';
+  else if (pL == ltr_R) camL = 'R';
+  else camL = 'N';
+}
+
 void setup() {
   delay(300);
   Serial.begin(115200);
@@ -133,6 +165,14 @@ void setup() {
   pinMode(SHT_LOXF, OUTPUT);
   pinMode(SHT_LOXL, OUTPUT);
   pinMode(SHT_LOXR, OUTPUT);
+
+  pinMode(P0L, INPUT);
+  pinMode(P1L, INPUT);
+  pinMode(P2L, INPUT);
+  pinMode(P0R, INPUT);
+  pinMode(P1R, INPUT);
+  pinMode(P2R, INPUT);
+  
   setID();
 
   Serial.println("---Startup Complete---");
@@ -148,6 +188,23 @@ void setMotorSpd(int spd) {
   RB -> setSpeed(spd);
 }
 
+void setMotorDir(bool l, bool r) {
+  if (l) {
+    LF -> run(FORWARD);
+    LB -> run(FORWARD);
+  } else {
+    LF -> run(BACKWARD);
+    LB -> run(BACKWARD);
+  }
+  if (r) {
+    RF -> run(FORWARD);
+    RB -> run(FORWARD);
+  } else {
+    RF -> run(BACKWARD);
+    RB -> run(BACKWARD);
+  }
+}
+
 void turn(db inpRot, db inpSpd, db errorM, int fixCnt) {
 //  if (abs(inpRot) < errorM) return;
   if (fixCnt >= 2) return;
@@ -158,10 +215,7 @@ void turn(db inpRot, db inpSpd, db errorM, int fixCnt) {
   setMotorSpd(spd);
   
   if (inpRot > 0) {
-    LF -> run(FORWARD);
-    LB -> run(FORWARD);
-    RF -> run(BACKWARD);
-    RB -> run(BACKWARD);
+    setMotorDir(1, 0);
     while (gz-curZ < inpRot) {
 //      lcd.clear(); lcd.setCursor(0, 1);
 //      lcd.println(String(gz-curZ)+"; "+String(inpRot));
@@ -169,10 +223,7 @@ void turn(db inpRot, db inpSpd, db errorM, int fixCnt) {
       getDataMPU();
     }
   } else if (inpRot < 0) {
-    LF -> run(BACKWARD);
-    LB -> run(BACKWARD);
-    RF -> run(FORWARD);
-    RB -> run(FORWARD);
+    setMotorDir(0, 1);
     while (gz-curZ > inpRot) {
 //      lcd.clear(); lcd.setCursor(0, 1);
 //      lcd.println(String(gz-curZ)+"; "+String(inpRot));
@@ -197,10 +248,7 @@ void moveForward(int inpDist, db inpSpd, int errorM, int fixCnt) {
   setMotorSpd(spd);
 
   if (inpDist > 0) {
-    LF -> run(FORWARD);
-    LB -> run(FORWARD);
-    RF -> run(FORWARD);
-    RB -> run(FORWARD);
+    setMotorDir(1, 1);
     while (curDF-dF < inpDist) {
       getDataDoF('F');
       getDataAmbient();
@@ -212,8 +260,8 @@ void moveForward(int inpDist, db inpSpd, int errorM, int fixCnt) {
         turn(2*turnDist, 1, 0.1, 0);
         return;
       } else if (gsVal > silverTile) {
-        lcd.clear();
-        lcd.print("Silver Detected");
+//        lcd.clear();
+//        lcd.print("Silver Detected");
       }
       if (dF < wallDist) {
         setMotorSpd(0);
@@ -223,10 +271,7 @@ void moveForward(int inpDist, db inpSpd, int errorM, int fixCnt) {
       }
     }
   } else if (inpDist < 0) {
-    LF -> run(BACKWARD);
-    LB -> run(BACKWARD);
-    RF -> run(BACKWARD);
-    RB -> run(BACKWARD);
+    setMotorDir(0, 0);
     while (curDF-dF > inpDist) {
       getDataDoF('F');
     }
@@ -238,24 +283,30 @@ void moveForward(int inpDist, db inpSpd, int errorM, int fixCnt) {
 }
 
 void debug() {
-  getDataMPU();
-  getDataDoF('A');
-  Serial.println("dL: "+String(dL));
-  Serial.println("dF: "+String(dF));
-  Serial.println("dR: "+String(dR));
+//  getDataMPU();
+//  getDataDoF('A');
+  getDataCamera();
+//  Serial.println("dL: "+String(dL));
+//  Serial.println("dF: "+String(dF));
+//  Serial.println("dR: "+String(dR));
 //  Serial.println(gz, 4);
 //  Serial.println("\n");
+
+//  Serial.println(String(p0l)+"; "+String(p1l)+"; "+String(p2l));
+//  Serial.println(String(p0r)+"; "+String(p1r)+"; "+String(p2r));
 //  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(String(camL)+"; "+String(camR));
 //  lcd.setCursor(0, 1);
-//  lcd.print(gz);
-  Serial.println();
+//  lcd.print(camR);
+//  Serial.println();
 }
 
 void loop() {
-  getDataDoF('A');
-  moveForward(moveDist, 0.7, 8, 0);
-  moveForward(moveDist, 0.7, 8, 0);
-  delay(99999);
+//  getDataDoF('A');
+//  moveForward(moveDist, 0.7, 8, 0);
+//  moveForward(moveDist, 0.7, 8, 0);
+//  delay(99999);
   
 //  if (dL > 200) {
 //    turn(-turnDist, 1, 0.1, 0);
@@ -267,6 +318,6 @@ void loop() {
 //  }
 //  moveForward(moveDist, 0.7, 8, 0);
   
-//  debug();
+  debug();
 //  turn((random(5)-2)*90, 1, 0.1, 0);
 }
