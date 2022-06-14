@@ -44,11 +44,11 @@ VL53L0X_RangingMeasurementData_t measureL;
 VL53L0X_RangingMeasurementData_t measureR;
 
 MPU6050 mpu6050(Wire);
-//LiquidCrystal lcd(7, 8, 12, 11, 10, 9);
+LiquidCrystal lcd(7, 8, 12, 11, 10, 9);
 
 void setID() {
-//  // LCD
-//  lcd.begin(16, 2);
+  // LCD
+  lcd.begin(16, 2);
   
   // AFMS: shield & motors
   AFMS.begin();
@@ -85,7 +85,8 @@ void setID() {
   }
   delay(10);
 
-//  lcd.print("Complete");
+  lcd.print("Complete");
+  delay(300);
 }
 
 void getDataMPU() {
@@ -118,6 +119,8 @@ void debug() {
 //  Serial.println("dR: "+String(dR));
   Serial.println(gz, 4);
   Serial.println("\n");
+  lcd.clear();
+  lcd.print(analogRead(8));
 }
 
 void setup() {
@@ -138,18 +141,19 @@ void setup() {
 }
 
 void loop() {
-  getDataDoF('A');
-  Serial.println(dL);
-  Serial.println(dF);
-  Serial.println(dR);
-  Serial.println();
+  
+//  getDataDoF('A');
+//  Serial.println(dL);
+//  Serial.println(dF);
+//  Serial.println(dR);
+//  Serial.println();
   
 //  lcd.clear();
 //  lcd.setCursor(0, 1);
 //  lcd.print(millis()/1000);
   
 //  getDataMPU();
-//  debug();
+  debug();
   
 //  LF -> setSpeed(200);
 //  LB -> setSpeed(200);

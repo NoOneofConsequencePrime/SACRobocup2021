@@ -20,19 +20,22 @@ typedef long long ll;
 #define SHT_LOXL 6
 #define SHT_LOXF 5
 #define SHT_LOXR 4
+#define GRAYSCALE_PIN 8
 
 // Settings
 const int maxSpd = 255;
 const int wasteDelay = 5;
 const int moveWait = 300;
-const int moveDist = 280;
-const db turnDist = 89;
-const int wallDist = 45;
-const db P_coeff = 0.8;
+const int moveDist = 270;
+const db turnDist = 88;
+const int wallDist = 45;// mm
+const db P_coeff = 0.6;
+const int blackTile = 300, silverTile = 150;
 
 // Data
 db gz;
 int dF, dL, dR;
+int gsVal;
 
 // Hardware
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
@@ -115,6 +118,10 @@ void getDataDoF(char c) {// F, A
   // https://pastebin.com/WcuVfiu5
 }
 
+void getDataAmbient() {
+  gsVal = analogRead(GRAYSCALE_PIN);
+}
+
 void setup() {
   delay(300);
   Serial.begin(115200);
@@ -134,6 +141,13 @@ void setup() {
   lcd.clear();
 }
 
+void setMotorSpd(int spd) {
+  LF -> setSpeed(spd);
+  LB -> setSpeed(spd);
+  RF -> setSpeed(spd);
+  RB -> setSpeed(spd);
+}
+
 void turn(db inpRot, db inpSpd, db errorM, int fixCnt) {
 //  if (abs(inpRot) < errorM) return;
   if (fixCnt >= 2) return;
@@ -141,10 +155,7 @@ void turn(db inpRot, db inpSpd, db errorM, int fixCnt) {
   getDataMPU();
   db curZ = gz;
   int spd = round(inpSpd*maxSpd);
-  LF -> setSpeed(spd);
-  LB -> setSpeed(spd);
-  RF -> setSpeed(spd);
-  RB -> setSpeed(spd);
+  setMotorSpd(spd);
   
   if (inpRot > 0) {
     LF -> run(FORWARD);
@@ -172,10 +183,7 @@ void turn(db inpRot, db inpSpd, db errorM, int fixCnt) {
 
 //  lcd.print(String(curZ+inpRot)+"; "+String(gz));
   turn(curZ+inpRot-gz, inpSpd*P_coeff, errorM, fixCnt+1);
-  LF -> setSpeed(0);
-  LB -> setSpeed(0);
-  RF -> setSpeed(0);
-  RB -> setSpeed(0);
+  setMotorSpd(0);
   if (fixCnt == 0) delay(moveWait);
 }
 
@@ -186,10 +194,7 @@ void moveForward(int inpDist, db inpSpd, int errorM, int fixCnt) {
   getDataDoF('F');
   int curDF = dF;
   int spd = round(inpSpd*maxSpd);
-  LF -> setSpeed(spd);
-  LB -> setSpeed(spd);
-  RF -> setSpeed(spd);
-  RB -> setSpeed(spd);
+  setMotorSpd(spd);
 
   if (inpDist > 0) {
     LF -> run(FORWARD);
@@ -198,11 +203,20 @@ void moveForward(int inpDist, db inpSpd, int errorM, int fixCnt) {
     RB -> run(FORWARD);
     while (curDF-dF < inpDist) {
       getDataDoF('F');
+      getDataAmbient();
+      if (gsVal > blackTile) {
+        setMotorSpd(0);
+        delay(moveWait);
+        getDataDoF('F');
+        moveForward(dF-curDF, inpSpd, errorM, 0);
+        turn(2*turnDist, 1, 0.1, 0);
+        return;
+      } else if (gsVal > silverTile) {
+        lcd.clear();
+        lcd.print("Silver Detected");
+      }
       if (dF < wallDist) {
-        LF -> setSpeed(0);
-        LB -> setSpeed(0);
-        RF -> setSpeed(0);
-        RB -> setSpeed(0);
+        setMotorSpd(0);
         if (fixCnt == 0) delay(moveWait);
         
         return;
@@ -219,10 +233,7 @@ void moveForward(int inpDist, db inpSpd, int errorM, int fixCnt) {
   }
 
   moveForward(-(curDF-inpDist-dF), inpSpd*P_coeff, errorM, fixCnt+1);
-  LF -> setSpeed(0);
-  LB -> setSpeed(0);
-  RF -> setSpeed(0);
-  RB -> setSpeed(0);
+  setMotorSpd(0);
   if (fixCnt == 0) delay(moveWait);
 }
 
@@ -242,22 +253,20 @@ void debug() {
 
 void loop() {
   getDataDoF('A');
-  if (dL > 200) {
-    turn(-turnDist, 1, 0.1, 0);
-  } else if (dF > 200) {
-  } else if (dR > 200) {
-    turn(turnDist, 1, 0.1, 0);
-  } else {
-    turn(2*turnDist, 1, 0.1, 0);
-  }
   moveForward(moveDist, 0.7, 8, 0);
+  moveForward(moveDist, 0.7, 8, 0);
+  delay(99999);
   
-//  moveForward(200, 0.6, 8, 0);
-//  delay(99999);
-//  
-////  debug();
-////  turn((random(5)-2)*90, 1, 0.1, 0);
-//
-////  turn(360, 1, 0.1, 0);
-////  turn(-360, 1, 0.1, 0);
+//  if (dL > 200) {
+//    turn(-turnDist, 1, 0.1, 0);
+//  } else if (dF > 200) {
+//  } else if (dR > 200) {
+//    turn(turnDist, 1, 0.1, 0);
+//  } else {
+//    turn(2*turnDist, 1, 0.1, 0);
+//  }
+//  moveForward(moveDist, 0.7, 8, 0);
+  
+//  debug();
+//  turn((random(5)-2)*90, 1, 0.1, 0);
 }
