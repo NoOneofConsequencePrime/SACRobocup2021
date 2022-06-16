@@ -41,7 +41,7 @@ const int wallDist = 80;// mm
 const int wallDetect = 120;// mm
 const db P_coeff = 0.6;
 const int blackTile = 300, silverTile = 150;
-const int ltr_H = 0, ltr_S = 4, ltr_U = 2, ltr_W = 1, ltr_Y = 6, ltr_G = 5, ltr_R = 3;
+const int ltr_H = 3, ltr_S = 5, ltr_R = 6, ltr_Y = 1, ltr_U = 2, ltr_G = 4;
 
 // Data
 db gz;
@@ -64,7 +64,7 @@ VL53L0X_RangingMeasurementData_t measureF;
 VL53L0X_RangingMeasurementData_t measureR;
 
 MPU6050 mpu6050(Wire);
-LiquidCrystal lcd(7, 8, 12, 11, 10, 9);
+LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
 
 void setID() {
   // AFMS: shield & motors
@@ -139,20 +139,24 @@ void getDataCamera() {
   int pR = (digitalRead(P0R)<<2)|(digitalRead(P1R)<<1)|digitalRead(P2R);
   if (pR == ltr_H) camR = 'H';
   else if (pR == ltr_S) camR = 'S';
-  else if (pR == ltr_U) camR = 'U';
-  else if (pR == ltr_W) camR = 'W';
-  else if (pR == ltr_Y) camR = 'Y';
-  else if (pR == ltr_G) camR = 'G';
   else if (pR == ltr_R) camR = 'R';
+  else if (pR == ltr_Y) camR = 'Y';
+  else if (pR == ltr_U) camR = 'U';
+  else if (pR == ltr_G) camR = 'G';
   else camR = 'N';
   if (pL == ltr_H) camL = 'H';
   else if (pL == ltr_S) camL = 'S';
-  else if (pL == ltr_U) camL = 'U';
-  else if (pL == ltr_W) camL = 'W';
-  else if (pL == ltr_Y) camL = 'Y';
-  else if (pL == ltr_G) camL = 'G';
   else if (pL == ltr_R) camL = 'R';
+  else if (pL == ltr_Y) camL = 'Y';
+  else if (pL == ltr_U) camL = 'U';
+  else if (pL == ltr_G) camL = 'G';
   else camL = 'N';
+//  lcd.setCursor(0, 0);
+////  lcd.print(pL);
+//  lcd.print(digitalRead(P0L)*100+digitalRead(P1L)*10+digitalRead(P2L));
+  lcd.setCursor(0, 0);
+//  lcd.print(pR);
+  lcd.print(digitalRead(P0R)*100+digitalRead(P1R)*10+digitalRead(P2R));
 }
 
 void setup() {
@@ -285,10 +289,10 @@ void moveForward(int inpDist, db inpSpd, int errorM, int fixCnt) {
 
 void debug() {
 //  getDataMPU();
-  getDataDoF('F');
-//  getDataCamera();
+//  getDataDoF('F');
+  getDataCamera();
 //  Serial.println("dL: "+String(dL));
-  Serial.println("dF: "+String(dF));
+//  Serial.println("dF: "+String(dF));
 //  Serial.println("dR: "+String(dR));
 //  Serial.println(gz, 4);
 
@@ -302,11 +306,7 @@ void debug() {
 //  Serial.println();
 }
 
-void loop() {
-//  moveForward(moveDist, 0.7, 8, 0);
-//  moveForward(moveDist, 0.7, 8, 0);
-//  delay(99999);
-  
+void simpleWallFollow() {
   getDataDoF('A');
   if (dL > wallDetect) {
     turn(-turnDist, 1, 0.1, 0);
@@ -317,7 +317,13 @@ void loop() {
     turn(2*turnDist, 1, 0.1, 0);
   }
   moveForward(moveDist, 0.7, 8, 0);
+}
+
+void loop() {
+//  moveForward(moveDist, 0.7, 8, 0);
+//  moveForward(moveDist, 0.7, 8, 0);
+//  delay(99999);
   
-//  debug();c
+  debug();
 //  turn((random(5)-2)*90, 1, 0.1, 0);
 }
