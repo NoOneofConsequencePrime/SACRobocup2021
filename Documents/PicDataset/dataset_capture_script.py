@@ -1,4 +1,4 @@
-# Dataset Capture Script - By: bryan.zhao - Wed Jun 15 2022
+# Dataset Capture Script - By: bryan.zhao - Thu Jun 16 2022
 
 # Use this script to control how your OpenMV Cam captures images for your dataset.
 # You should apply the same image pre-processing steps you expect to run on images

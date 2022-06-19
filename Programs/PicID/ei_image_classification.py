@@ -44,7 +44,7 @@ while(True):
                 ret_val = id_val
                 ret_name = id_name
 
-        #print("%s: %f"%(ret_name, ret_val))
+        print("%s: %f"%(ret_name, ret_val))
         if not ret_name or ret_name == "White" or ret_val < 0.8:
             p0.low()
             p1.low()

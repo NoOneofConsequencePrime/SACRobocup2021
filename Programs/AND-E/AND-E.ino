@@ -41,13 +41,13 @@ const int wallDist = 80;// mm
 const int wallDetect = 120;// mm
 const db P_coeff = 0.6;
 const int blackTile = 300, silverTile = 150;
-const int ltr_H = 3, ltr_S = 5, ltr_R = 6, ltr_Y = 1, ltr_U = 2, ltr_G = 4;
+const int ltr_H = 7, ltr_S = 3, ltr_RY = 5, ltr_UG = 6;
 
 // Data
 db gz;
 int dF, dL, dR;
 int gsVal;
-char camL, camR;
+String camL, camR;
 
 // Hardware
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
@@ -137,25 +137,22 @@ void getDataAmbient() {
 void getDataCamera() {
   int pL = (digitalRead(P0L)<<2)|(digitalRead(P1L)<<1)|digitalRead(P2L);
   int pR = (digitalRead(P0R)<<2)|(digitalRead(P1R)<<1)|digitalRead(P2R);
-  if (pR == ltr_H) camR = 'H';
-  else if (pR == ltr_S) camR = 'S';
-  else if (pR == ltr_R) camR = 'R';
-  else if (pR == ltr_Y) camR = 'Y';
-  else if (pR == ltr_U) camR = 'U';
-  else if (pR == ltr_G) camR = 'G';
-  else camR = 'N';
-  if (pL == ltr_H) camL = 'H';
-  else if (pL == ltr_S) camL = 'S';
-  else if (pL == ltr_R) camL = 'R';
-  else if (pL == ltr_Y) camL = 'Y';
-  else if (pL == ltr_U) camL = 'U';
-  else if (pL == ltr_G) camL = 'G';
-  else camL = 'N';
+  if (pL == ltr_H) camL = "H";
+  else if (pL == ltr_S) camL = "S";
+  else if (pL == ltr_RY) camL = "RY";
+  else if (pL == ltr_UG) camL = "UG";
+  else camL = "N";
+  if (pR == ltr_H) camR = "H";
+  else if (pR == ltr_S) camR = "S";
+  else if (pR == ltr_RY) camR = "RY";
+  else if (pR == ltr_UG) camR = "UG";
+  else camR = "N";
 //  lcd.setCursor(0, 0);
 ////  lcd.print(pL);
 //  lcd.print(digitalRead(P0L)*100+digitalRead(P1L)*10+digitalRead(P2L));
   lcd.setCursor(0, 0);
-//  lcd.print(pR);
+//  lcd.print(camL+"; "+camR);
+//  Serial.println(camL+"; "+camR);
   lcd.print(digitalRead(P0R)*100+digitalRead(P1R)*10+digitalRead(P2R));
 }
 
