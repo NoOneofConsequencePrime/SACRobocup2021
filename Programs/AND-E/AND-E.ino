@@ -147,13 +147,11 @@ void getDataCamera() {
   else if (pR == ltr_RY) camR = "RY";
   else if (pR == ltr_UG) camR = "UG";
   else camR = "N";
+//  if (millis()%20 == 0) lcd.clear();
 //  lcd.setCursor(0, 0);
-////  lcd.print(pL);
-//  lcd.print(digitalRead(P0L)*100+digitalRead(P1L)*10+digitalRead(P2L));
-  lcd.setCursor(0, 0);
-//  lcd.print(camL+"; "+camR);
-//  Serial.println(camL+"; "+camR);
-  lcd.print(digitalRead(P0R)*100+digitalRead(P1R)*10+digitalRead(P2R));
+//  lcd.print(camL);
+//  lcd.setCursor(0, 1);
+//  lcd.print(camR);
 }
 
 void setup() {
