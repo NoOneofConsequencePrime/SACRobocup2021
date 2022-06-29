@@ -27,6 +27,7 @@ typedef long long ll;
 #define TRIG_PIN 5
 #define ECHO_PIN 4
 #define SERVO_PIN 25
+#define ID_PIN 53
 
 // Camera Pins
 #define P0L 26
@@ -40,8 +41,8 @@ typedef long long ll;
 const int maxSpd = 255;
 const int wasteDelay = 5;
 const int moveWait = 250;
-const int moveDist = 290;
-const db turnDist = 88;// degrees
+const int moveDist = 285;
+const db turnDist = 89;// degrees
 const int wallDist = 100;// mm
 const int sonicDist = 500;// mm
 //const int sonicThreshold = 30;// mm
@@ -82,6 +83,9 @@ Servo kitServo;
 void setID() {
   // Servo
   kitServo.attach(SERVO_PIN);
+
+  // ID LED
+  pinMode(ID_PIN, OUTPUT);
   
   // AFMS: shield & motors
   AFMS.begin();
@@ -245,13 +249,17 @@ void turn(db inpRot, db inpSpd, db errorM, int fixCnt) {
   if (inpRot > 0) {
     setMotorDir(1, 0);
     while (gz-curZ < inpRot) {
+      digitalWrite(ID_PIN, HIGH);
       getDataMPU();
     }
+    digitalWrite(ID_PIN, LOW);
   } else if (inpRot < 0) {
     setMotorDir(0, 1);
     while (gz-curZ > inpRot) {
+      digitalWrite(ID_PIN, HIGH);
       getDataMPU();
     }
+    digitalWrite(ID_PIN, LOW);
   }
   
   turn(curZ+inpRot-gz, inpSpd*P_coeff, errorM, fixCnt+1);
@@ -309,8 +317,15 @@ void deployKit() {
   delay(kitDelay);
 }
 
+void flashLED() {
+  digitalWrite(ID_PIN, HIGH);
+  delay(5000);
+  digitalWrite(ID_PIN, LOW);
+}
+
 void chkKit() {
   getDataCamera();
+  if (camL != "N") flashLED();
   if (camL == "H") {
     turn(turnDist, 1, turnMargin, 0);
     deployKit(); deployKit(); deployKit();
@@ -326,6 +341,7 @@ void chkKit() {
   }
   
   getDataCamera();
+  if (camR != "N") flashLED();
   if (camR == "H") {
     turn(-turnDist, 1, turnMargin, 0);
     deployKit(); deployKit(); deployKit();
@@ -369,15 +385,17 @@ void simpleWallFollow() {
   getDataDoF('A');
   if (dL > wallDetect) {
     turn(-turnDist, 1, turnMargin, 0);
+    chkKit();
   } else if (dF > wallDetect) {
   } else if (dR > wallDetect) {
     turn(turnDist, 1, turnMargin, 0);
+    chkKit();
   } else {
     turn(turnDist, 1, turnMargin, 0);
     chkKit();
     turn(turnDist, 1, turnMargin, 0);
+    chkKit();
   }
-  chkKit();
   getDataDoF('F');
   moveForward(moveDist, 0.7, moveMargin, 0);
 }
