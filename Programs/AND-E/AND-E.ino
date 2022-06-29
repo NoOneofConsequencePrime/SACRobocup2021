@@ -13,6 +13,7 @@ typedef long long ll;
 #include "MPU6050_tockn.h"
 #include "LiquidCrystal.h"
 #include "SR04.h"
+#include "Servo.h"
 
 // DoF Pins
 #define LOXF_ADDRESS 0x30
@@ -25,29 +26,33 @@ typedef long long ll;
 #define GRAYSCALE_PIN 8
 #define TRIG_PIN 5
 #define ECHO_PIN 4
+#define SERVO_PIN 25
 
 // Camera Pins
-#define P0L 29
-#define P1L 30
-#define P2L 31
-#define P0R 23
-#define P1R 24
-#define P2R 25
+#define P0L 26
+#define P1L 24
+#define P2L 22
+#define P0R 33
+#define P1R 31
+#define P2R 29
 
 // Settings
 const int maxSpd = 255;
 const int wasteDelay = 5;
-const int moveWait = 500;
-const int moveDist = 300;
-const db turnDist = 90;// degrees
-const int wallDist = 50;// mm
-const int sonicThreshold = 70;// mm
+const int moveWait = 250;
+const int moveDist = 290;
+const db turnDist = 88;// degrees
+const int wallDist = 100;// mm
+const int sonicDist = 500;// mm
+//const int sonicThreshold = 30;// mm
 const int wallDetect = 250;// mm
-const db P_coeff = 0.6;
+const db P_coeff = 0.7;
 const int blackTile = 300, silverTile = 150;
 const int ltr_H = 7, ltr_S = 3, ltr_RY = 5, ltr_UG = 6;
-const int moveMargin = 5;
-const db turnMargin = 0.1;
+const int moveMargin = 0;// 5
+const db turnMargin = 0;// 0.1
+const int kitOpen = 50, kitClose = 100;
+const int kitDelay = 300;
 
 // Data
 db gz;
@@ -70,10 +75,14 @@ VL53L0X_RangingMeasurementData_t measureF;
 VL53L0X_RangingMeasurementData_t measureR;
 
 MPU6050 mpu6050(Wire);
-LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
+//LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
 SR04 sr04 = SR04(ECHO_PIN, TRIG_PIN);
+Servo kitServo;
 
 void setID() {
+  // Servo
+  kitServo.attach(SERVO_PIN);
+  
   // AFMS: shield & motors
   AFMS.begin();
   LF -> setSpeed(0); LF -> run(RELEASE);
@@ -110,7 +119,7 @@ void setID() {
   delay(10);
 
   // LCD
-  lcd.begin(16, 2);
+//  lcd.begin(16, 2);
 }
 
 void getDataMPU() {
@@ -118,17 +127,20 @@ void getDataMPU() {
   gz = -(mpu6050.getAngleZ())/2;
 }
 
-void getDataDoF(char c) {// F, A
+void getDataDoF(char c) {// F, A, S
   delay(30);
   // DoF sensors
-  loxF.rangingTest(&measureF, false);
-  getDataSonic();
+  if (c != 'S') {
+    loxF.rangingTest(&measureF, false);
+    getDataSonic();
+  }
   if (c != 'F') loxL.rangingTest(&measureL, false);
   if (c != 'F') loxR.rangingTest(&measureR, false);
 
-  if (measureF.RangeStatus != 4) {
+  if (c != 'S' && measureF.RangeStatus != 4) {
     dF = measureF.RangeMilliMeter;
-    if (abs(dF-sonicDF) <= sonicThreshold) dF = sonicDF;
+    if (dF < sonicDist) dF = sonicDF;
+//    if (dF < sonicDist || abs(dF-sonicDF) > sonicThreshold) dF = sonicDF;
   } else dF = 9999;
   if (c != 'F' && measureL.RangeStatus != 4) {
     dL = measureL.RangeMilliMeter;
@@ -151,21 +163,23 @@ void getDataAmbient() {
 void getDataCamera() {
   int pL = (digitalRead(P0L)<<2)|(digitalRead(P1L)<<1)|digitalRead(P2L);
   int pR = (digitalRead(P0R)<<2)|(digitalRead(P1R)<<1)|digitalRead(P2R);
-  if (pL == ltr_H) camL = "H";
-  else if (pL == ltr_S) camL = "S";
-  else if (pL == ltr_RY) camL = "RY";
-  else if (pL == ltr_UG) camL = "UG";
+  getDataDoF('S');
+  if (pL == ltr_H && dL < wallDetect) camL = "H";
+  else if (pL == ltr_S && dL < wallDetect) camL = "S";
+  else if (pL == ltr_RY && dL < wallDetect) camL = "RY";
+  else if (pL == ltr_UG && dL < wallDetect) camL = "UG";
   else camL = "N";
-  if (pR == ltr_H) camR = "H";
-  else if (pR == ltr_S) camR = "S";
-  else if (pR == ltr_RY) camR = "RY";
-  else if (pR == ltr_UG) camR = "UG";
+  if (pR == ltr_H && dR < wallDetect) camR = "H";
+  else if (pR == ltr_S && dR < wallDetect) camR = "S";
+  else if (pR == ltr_RY && dR < wallDetect) camR = "RY";
+  else if (pR == ltr_UG && dR < wallDetect) camR = "UG";
   else camR = "N";
-//  if (millis()%20 == 0) lcd.clear();
+//  lcd.clear();
 //  lcd.setCursor(0, 0);
 //  lcd.print(camL);
 //  lcd.setCursor(0, 1);
 //  lcd.print(camR);
+//  Serial.println(camL+"; "+camR);
 }
 
 void setup() {
@@ -190,9 +204,9 @@ void setup() {
   setID();
 
   Serial.println("---Startup Complete---");
-  lcd.print("---Complete---");
+//  lcd.print("---Complete---");
   delay(200);
-  lcd.clear();
+//  lcd.clear();
 }
 
 void setMotorSpd(int spd) {
@@ -231,22 +245,15 @@ void turn(db inpRot, db inpSpd, db errorM, int fixCnt) {
   if (inpRot > 0) {
     setMotorDir(1, 0);
     while (gz-curZ < inpRot) {
-//      lcd.clear(); lcd.setCursor(0, 1);
-//      lcd.println(String(gz-curZ)+"; "+String(inpRot));
-//      lcd.print(gz);
       getDataMPU();
     }
   } else if (inpRot < 0) {
     setMotorDir(0, 1);
     while (gz-curZ > inpRot) {
-//      lcd.clear(); lcd.setCursor(0, 1);
-//      lcd.println(String(gz-curZ)+"; "+String(inpRot));
-//      lcd.print(gz);
       getDataMPU();
     }
   }
-
-//  lcd.print(String(curZ+inpRot)+"; "+String(gz));
+  
   turn(curZ+inpRot-gz, inpSpd*P_coeff, errorM, fixCnt+1);
   setMotorSpd(0);
   if (fixCnt == 0) delay(moveWait);
@@ -295,13 +302,53 @@ void moveForward(int inpDist, db inpSpd, int errorM, int fixCnt) {
   if (fixCnt == 0) delay(moveWait);
 }
 
+void deployKit() {
+  kitServo.write(kitOpen);
+  delay(kitDelay);
+  kitServo.write(kitClose);
+  delay(kitDelay);
+}
+
+void chkKit() {
+  getDataCamera();
+  if (camL == "H") {
+    turn(turnDist, 1, turnMargin, 0);
+    deployKit(); deployKit(); deployKit();
+    turn(-turnDist, 1, turnMargin, 0);
+  } else if (camL == "S") {
+    turn(turnDist, 1, turnMargin, 0);
+    deployKit(); deployKit();
+    turn(-turnDist, 1, turnMargin, 0);
+  } else if (camL == "RY") {
+    turn(turnDist, 1, turnMargin, 0);
+    deployKit();
+    turn(-turnDist, 1, turnMargin, 0);
+  }
+  
+  getDataCamera();
+  if (camR == "H") {
+    turn(-turnDist, 1, turnMargin, 0);
+    deployKit(); deployKit(); deployKit();
+    turn(turnDist, 1, turnMargin, 0);
+  } else if (camR == "S") {
+    turn(-turnDist, 1, turnMargin, 0);
+    deployKit(); deployKit();
+    turn(turnDist, 1, turnMargin, 0);
+  } else if (camR == "RY") {
+    turn(-turnDist, 1, turnMargin, 0);
+    deployKit();
+    turn(turnDist, 1, turnMargin, 0);
+  } 
+}
+
 void debug() {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(dF);
+//  lcd.clear();
+//  lcd.setCursor(0, 0);
+//  lcd.print(dF);
 //  getDataMPU();
 //  getDataDoF('F');
-//  getDataCamera();
+  getDataCamera();
+  delay(500);
 //  Serial.println("dL: "+String(dL));
 //  Serial.println("dF: "+String(dF));
 //  Serial.println("dR: "+String(dR));
@@ -318,6 +365,7 @@ void debug() {
 }
 
 void simpleWallFollow() {
+  chkKit();
   getDataDoF('A');
   if (dL > wallDetect) {
     turn(-turnDist, 1, turnMargin, 0);
@@ -325,14 +373,18 @@ void simpleWallFollow() {
   } else if (dR > wallDetect) {
     turn(turnDist, 1, turnMargin, 0);
   } else {
-    turn(2*turnDist, 1, turnMargin, 0);
+    turn(turnDist, 1, turnMargin, 0);
+    chkKit();
+    turn(turnDist, 1, turnMargin, 0);
   }
+  chkKit();
   getDataDoF('F');
   moveForward(moveDist, 0.7, moveMargin, 0);
 }
 
 void loop() {
   simpleWallFollow();
+//  getDataCamera();
 //  getDataDoF('F');
 //  getDataSonic();
 //  getDataMPU();

@@ -12,6 +12,7 @@ typedef long long ll;
 #include "ArduinoSort.h"
 #include "MPU6050_tockn.h"
 #include "LiquidCrystal.h"
+#include "Servo.h"
 
 // DoF pins
 #define LOXF_ADDRESS 0x30
@@ -20,6 +21,12 @@ typedef long long ll;
 #define SHT_LOXL 6
 #define SHT_LOXF 5
 #define SHT_LOXR 4
+
+#define GRAYSCALE_PIN 8
+#define TRIG_PIN 5
+#define ECHO_PIN 4
+#define SERVO_PIN 25
+#define ID_PIN 53
 
 // Settings
 const int maxSpd = 255;
@@ -44,9 +51,16 @@ VL53L0X_RangingMeasurementData_t measureL;
 VL53L0X_RangingMeasurementData_t measureR;
 
 MPU6050 mpu6050(Wire);
-LiquidCrystal lcd(7, 8, 12, 11, 10, 9);
+LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
+Servo kitServo;
 
 void setID() {
+  // Servo
+  kitServo.attach(SERVO_PIN);
+
+  // ID LED
+  pinMode(ID_PIN, OUTPUT);
+  
   // LCD
   lcd.begin(16, 2);
   
@@ -127,12 +141,12 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Initializing...");
   while (!Serial) {delay(1);}
-  Wire.begin();
-  mpu6050.begin();
-  mpu6050.calcGyroOffsets(1);
-  pinMode(SHT_LOXF, OUTPUT);
-  pinMode(SHT_LOXL, OUTPUT);
-  pinMode(SHT_LOXR, OUTPUT);
+//  Wire.begin();
+//  mpu6050.begin();
+//  mpu6050.calcGyroOffsets(1);
+//  pinMode(SHT_LOXF, OUTPUT);
+//  pinMode(SHT_LOXL, OUTPUT);
+//  pinMode(SHT_LOXR, OUTPUT);
 
   setID();
   delay(100);
@@ -140,8 +154,61 @@ void setup() {
   Serial.println("---Startup Complete---");
 }
 
+void setMotorSpd(int spd) {
+  LF -> setSpeed(spd);
+  LB -> setSpeed(spd);
+  RF -> setSpeed(spd);
+  RB -> setSpeed(spd);
+}
+
+void setMotorDir(bool l, bool r) {
+  if (l) {
+    LF -> run(FORWARD);
+    LB -> run(FORWARD);
+  } else {
+    LF -> run(BACKWARD);
+    LB -> run(BACKWARD);
+  }
+  if (r) {
+    RF -> run(FORWARD);
+    RB -> run(FORWARD);
+  } else {
+    RF -> run(BACKWARD);
+    RB -> run(BACKWARD);
+  }
+}
+
 void loop() {
+  digitalWrite(ID_PIN, HIGH);
+  delay(5000);
+  digitalWrite(ID_PIN, LOW);
+  delay(1000);
   
+//  kitServo.write(90);
+//  for (int i = 0; i <= 180; i++) {
+//    kitServo.write(i);
+//    delay(10);
+//  }
+//  for (int i = 100; i >= 50; i--) {
+//    kitServo.write(i);
+//    delay(5);
+//  }
+//  for (int i = 50; i <= 100; i++) {
+//    kitServo.write(i);
+//    delay(5);
+//  }
+//  for (int i = 0; i <= 180; i++) {
+//    kitServo.write(i);
+//    delay(50);
+//  }
+//  delay(99999);
+//  delay(1000);
+//  kitServo.write(180);
+//  delay(1000);
+
+//  lcd.clear();
+//  lcd.setCursor(0, 0);
+//  lcd.print("Hello World");
 //  getDataDoF('A');
 //  Serial.println(dL);
 //  Serial.println(dF);
@@ -153,7 +220,7 @@ void loop() {
 //  lcd.print(millis()/1000);
   
 //  getDataMPU();
-  debug();
+//  debug();
   
 //  LF -> setSpeed(200);
 //  LB -> setSpeed(200);
