@@ -298,6 +298,7 @@ void moveForward(int inpDist, db inpSpd, int errorM, int fixCnt) {
     getDataDoF('F');
     if (fixCnt == 0) {
       setMotorDir(1, 1);
+      
       ul stMS = millis();
       while (millis()-stMS < preRampDelay) {
         getDataAmbient();
