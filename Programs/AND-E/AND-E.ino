@@ -1,6 +1,7 @@
 // Convenience
 typedef double db;
 typedef long long ll;
+typedef unsigned long ul;
 
 // Program Setup
 #include "Wire.h"
@@ -38,22 +39,26 @@ typedef long long ll;
 #define P2R 29
 
 // Settings
+const int wasteDelay = 2;// ms
 const int maxSpd = 255;
-const int wasteDelay = 5;
 const int moveWait = 250;
-const int moveDist = 285;
+const int moveDist = 300;
 const db turnDist = 89;// degrees
-const int wallDist = 100;// mm
-const int sonicDist = 500;// mm
-//const int sonicThreshold = 30;// mm
+const int wallDist = 80;// mm
+const int sonicDist = 450;// mm
+const int sonicLim = 50;// mm
 const int wallDetect = 250;// mm
 const db P_coeff = 0.7;
 const int blackTile = 300, silverTile = 150;
 const int ltr_H = 7, ltr_S = 3, ltr_RY = 5, ltr_UG = 6;
 const int moveMargin = 0;// 5
 const db turnMargin = 0;// 0.1
-const int kitOpen = 50, kitClose = 100;
+const int kitOpen = 50, kitClose = 95;
 const int kitDelay = 300;
+const int fwdCrCnt = 4;
+const int preRampDelay = 800;
+const int minRampDist = 2000;// mm
+//const int bwdCrDist = 10;// mm
 
 // Data
 db gz;
@@ -76,7 +81,7 @@ VL53L0X_RangingMeasurementData_t measureF;
 VL53L0X_RangingMeasurementData_t measureR;
 
 MPU6050 mpu6050(Wire);
-//LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
+LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
 SR04 sr04 = SR04(ECHO_PIN, TRIG_PIN);
 Servo kitServo;
 
@@ -123,7 +128,7 @@ void setID() {
   delay(10);
 
   // LCD
-//  lcd.begin(16, 2);
+  lcd.begin(16, 2);
 }
 
 void getDataMPU() {
@@ -143,7 +148,7 @@ void getDataDoF(char c) {// F, A, S
 
   if (c != 'S' && measureF.RangeStatus != 4) {
     dF = measureF.RangeMilliMeter;
-    if (dF < sonicDist) dF = sonicDF;
+    if (dF < sonicDist || sonicDF < sonicLim) dF = sonicDF;
 //    if (dF < sonicDist || abs(dF-sonicDF) > sonicThreshold) dF = sonicDF;
   } else dF = 9999;
   if (c != 'F' && measureL.RangeStatus != 4) {
@@ -208,9 +213,9 @@ void setup() {
   setID();
 
   Serial.println("---Startup Complete---");
-//  lcd.print("---Complete---");
+  lcd.print("---Complete---");
   delay(200);
-//  lcd.clear();
+  lcd.clear();
 }
 
 void setMotorSpd(int spd) {
@@ -237,6 +242,13 @@ void setMotorDir(bool l, bool r) {
   }
 }
 
+void setMotorRel() {
+  LF -> run(RELEASE);
+  LB -> run(RELEASE);
+  RF -> run(RELEASE);
+  RB -> run(RELEASE);
+}
+
 void turn(db inpRot, db inpSpd, db errorM, int fixCnt) {
 //  if (abs(inpRot) < errorM) return;
   if (fixCnt >= 2) return;
@@ -244,70 +256,145 @@ void turn(db inpRot, db inpSpd, db errorM, int fixCnt) {
   getDataMPU();
   db curZ = gz;
   int spd = round(inpSpd*maxSpd);
+  setMotorRel();
   setMotorSpd(spd);
   
   if (inpRot > 0) {
     setMotorDir(1, 0);
-    while (gz-curZ < inpRot) {
-      digitalWrite(ID_PIN, HIGH);
+    while (abs(gz-curZ) < abs(inpRot)) {
+      setMotorDir(1, 0);
       getDataMPU();
+      delay(wasteDelay);
     }
-    digitalWrite(ID_PIN, LOW);
   } else if (inpRot < 0) {
     setMotorDir(0, 1);
-    while (gz-curZ > inpRot) {
-      digitalWrite(ID_PIN, HIGH);
+    while (abs(gz-curZ) < abs(inpRot)) {
+      setMotorDir(0, 1);
       getDataMPU();
+      delay(wasteDelay);
     }
-    digitalWrite(ID_PIN, LOW);
   }
-  
+
+  setMotorSpd(0);
+  getDataMPU();
   turn(curZ+inpRot-gz, inpSpd*P_coeff, errorM, fixCnt+1);
   setMotorSpd(0);
   if (fixCnt == 0) delay(moveWait);
+  setMotorRel();
 }
 
+int fwdCnt = 0;
 void moveForward(int inpDist, db inpSpd, int errorM, int fixCnt) {
-  if (abs(inpDist) < errorM || inpSpd < 0.3 || dF < wallDist) return;
+  if (abs(inpDist) < errorM || inpSpd < 0.3 || (dF < wallDist && inpDist > 0)) return;
 //  if (fixCnt >= 2) return;
 
   getDataDoF('F');
   int curDF = dF;
   int spd = round(inpSpd*maxSpd);
+  setMotorRel();
   setMotorSpd(spd);
 
   if (inpDist > 0) {
-    setMotorDir(1, 1);
-    while (curDF-dF < inpDist) {
-      getDataDoF('F');
-      getDataAmbient();
-      if (gsVal > blackTile) {
-        setMotorSpd(0);
-        delay(moveWait);
-        getDataDoF('F');
-        moveForward(dF-curDF, inpSpd, errorM, 0);
-        turn(2*turnDist, 1, 0.1, 0);
-        return;
-      } else if (gsVal > silverTile) {
-//        lcd.clear();
-//        lcd.print("Silver Detected");
+    getDataDoF('F');
+    if (fixCnt == 0) {
+      setMotorDir(1, 1);
+      ul stMS = millis();
+      while (millis()-stMS < preRampDelay) {
+        getDataAmbient();
+        if (gsVal > blackTile) {
+          setMotorSpd(0);
+          delay(moveWait);
+          getDataDoF('F');
+          moveForward(dF-curDF, inpSpd, errorM, 0);
+          turn(2*turnDist, 1, 0.1, 0);
+          return;
+        }
+        delay(wasteDelay);
       }
-      if (dF < wallDist) {
-        setMotorSpd(0);
-        if (fixCnt == 0) delay(moveWait);
-        return;
+    }
+    getDataDoF('F');
+    setMotorDir(1, 1);
+    if (dF > minRampDist && fixCnt == 0) {
+      while (dF > wallDist) {
+        getDataDoF('F');
+        getDataAmbient();
+        if (gsVal > blackTile) {
+          setMotorSpd(0);
+          delay(moveWait);
+          getDataDoF('F');
+          moveForward(dF-curDF, inpSpd, errorM, 0);
+          turn(2*turnDist, 1, 0.1, 0);
+          return;
+        }
+        delay(wasteDelay);
+      }
+      setMotorSpd(0);
+      if (fixCnt == 0) delay(moveWait);
+      return;
+    }
+    if (dF < wallDetect*2 && fixCnt == 0) {
+      while (dF > wallDist) {
+        getDataDoF('F');
+        getDataAmbient();
+        if (gsVal > blackTile) {
+          setMotorSpd(0);
+          delay(moveWait);
+          getDataDoF('F');
+          moveForward(dF-curDF, inpSpd, errorM, 0);
+          turn(2*turnDist, 1, 0.1, 0);
+          return;
+        }
+        delay(wasteDelay);
+      }
+      if (fwdCnt == fwdCrCnt) {
+        fwdCnt = 0;
+        delay(250);// Move to touch front wall
+//        setMotorSpd(0);
+//        delay(moveWait);
+//        getDataDoF('F');
+//        moveForward(-bwdCrDist, inpSpd, errorM, 0);
+      }
+      setMotorSpd(0);
+      if (fixCnt == 0) delay(moveWait);
+      setMotorRel();
+      fwdCnt++;
+      return;
+    } else {
+      while (curDF-dF < inpDist) {
+        getDataDoF('F');
+        getDataAmbient();
+        if (gsVal > blackTile) {
+          setMotorSpd(0);
+          delay(moveWait);
+          getDataDoF('F');
+          moveForward(dF-curDF, inpSpd, errorM, 0);
+          turn(2*turnDist, 1, 0.1, 0);
+          return;
+        } else if (gsVal > silverTile) {
+//          lcd.clear();
+//          lcd.print("Silver Detected");
+        }
+        if (dF < wallDist) {
+          setMotorSpd(0);
+          if (fixCnt == 0) delay(moveWait);
+          setMotorRel();
+          return;
+        }
+        delay(wasteDelay);
       }
     }
   } else if (inpDist < 0) {
     setMotorDir(0, 0);
     while (curDF-dF > inpDist) {
       getDataDoF('F');
+      delay(wasteDelay);
     }
   }
 
   moveForward(-(curDF-inpDist-dF), inpSpd*P_coeff, errorM, fixCnt+1);
   setMotorSpd(0);
   if (fixCnt == 0) delay(moveWait);
+  setMotorRel();
 }
 
 void deployKit() {
@@ -328,7 +415,7 @@ void chkKit() {
   if (camL != "N") flashLED();
   if (camL == "H") {
     turn(turnDist, 1, turnMargin, 0);
-    deployKit(); deployKit(); deployKit();
+    deployKit(); deployKit();// deployKit();
     turn(-turnDist, 1, turnMargin, 0);
   } else if (camL == "S") {
     turn(turnDist, 1, turnMargin, 0);
@@ -344,7 +431,7 @@ void chkKit() {
   if (camR != "N") flashLED();
   if (camR == "H") {
     turn(-turnDist, 1, turnMargin, 0);
-    deployKit(); deployKit(); deployKit();
+    deployKit(); deployKit();// deployKit();
     turn(turnDist, 1, turnMargin, 0);
   } else if (camR == "S") {
     turn(-turnDist, 1, turnMargin, 0);
@@ -361,10 +448,11 @@ void debug() {
 //  lcd.clear();
 //  lcd.setCursor(0, 0);
 //  lcd.print(dF);
-//  getDataMPU();
+  getDataMPU();
 //  getDataDoF('F');
-  getDataCamera();
-  delay(500);
+  Serial.println(gz);
+//  getDataCamera();
+//  delay(500);
 //  Serial.println("dL: "+String(dL));
 //  Serial.println("dF: "+String(dF));
 //  Serial.println("dR: "+String(dR));
@@ -398,6 +486,7 @@ void simpleWallFollow() {
   }
   getDataDoF('F');
   moveForward(moveDist, 0.7, moveMargin, 0);
+  delay(wasteDelay);
 }
 
 void loop() {
